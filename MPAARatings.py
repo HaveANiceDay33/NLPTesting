@@ -25,6 +25,7 @@ df1 = df1.replace(to_replace='M/PG', value=np.nan)
 df1 = df1.replace(to_replace='TV-G', value=np.nan)
 df1 = df1.replace(to_replace='TV-PG', value=np.nan)
 df1 = df1.replace(to_replace='TV-MA', value=np.nan)
+df1 = df1.replace(to_replace='NC-17', value=np.nan)
 df1 = df1.replace(to_replace='M', value=np.nan)
 df1 = df1.replace(to_replace='X', value=np.nan)
 df1 = df1.dropna(axis=0)
@@ -65,25 +66,25 @@ targetList = []
 
 for i in range(len(df1.values)):
     intList.append(text_to_int(df1.values[i][0], token))
-    if target.values[i] == 'NC-17':
-        targetList.append([1,0,0,0,0])
-    elif target.values[i] == 'R':
-        targetList.append([0,1,0,0,0])
+
+    if target.values[i] == 'R':
+        targetList.append([1,0,0,0])
     elif target.values[i] == 'PG-13':
-        targetList.append([0,0,1,0,0])
+        targetList.append([0,1,0,0])
     elif target.values[i] == 'PG':
-        targetList.append([0,0,0,1,0])
+        targetList.append([0,0,1,0])
     elif target.values[i] == 'G':
-        targetList.append([0,0,0,0,1])
+        targetList.append([0,0,0,1])
     else:
         targetList.append(5)
+
 
 test_size = 200
 
 dataList = tf.keras.preprocessing.sequence.pad_sequences(sequences=intList, padding='post', maxlen=25)
 
 dataset = tf.data.Dataset.from_tensor_slices((dataList, targetList))
-dataset_shuffled = dataset.shuffle(len(targetList)-1)
+dataset_shuffled = dataset.shuffle(len(targetList)-2)
 
 testing = dataset_shuffled.take(test_size)
 training = dataset_shuffled.skip(test_size)
@@ -104,7 +105,7 @@ def makeModel(embed_dim, embed_out, lst_dim, batch_size):
     model.add(tf.keras.layers.Dense(lst_dim, activation='relu')),
     model.add(tf.keras.layers.Dense(256)),
     model.add(tf.keras.layers.Dense(64)),
-    model.add(tf.keras.layers.Dense(5,activation = 'relu')),
+    model.add(tf.keras.layers.Dense(4,activation = 'relu')),
     model.add(tf.keras.layers.Softmax())
     return model
 
