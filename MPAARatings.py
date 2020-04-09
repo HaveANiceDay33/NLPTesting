@@ -81,7 +81,7 @@ dataset_shuffled = dataset.shuffle(len(targetList)-1)
 testing = dataset_shuffled.take(test_size)
 training = dataset_shuffled.skip(test_size)
 
-train_dataset = training.shuffle(len(targetList)-test_size).batch(5)
+train_dataset = training.shuffle(len(targetList)-test_size-1).batch(5)
 test_dataset = testing.shuffle(test_size).batch(1)
 
 
