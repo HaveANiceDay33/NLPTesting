@@ -6,6 +6,7 @@ data = pd.read_csv("Data/IMDB_MOVIES.csv")
 data2 = pd.read_csv("Data/IMDB_MOVIES_2.csv")
 df1 = data[['Rated', 'Plot']]
 df2 = data2[['Rated', 'Plot']]
+df1 = pd.concat([df1, df2])
 
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
@@ -18,6 +19,8 @@ df1 = df1.replace(to_replace='APPROVED', value=np.nan)
 df1 = df1.replace(to_replace='PASSED', value=np.nan)
 df1 = df1.replace(to_replace='GP', value=np.nan)
 df1 = df1.replace(to_replace='TV-14', value=np.nan)
+df1 = df1.replace(to_replace='TV-Y7', value=np.nan)
+df1 = df1.replace(to_replace='TV-Y', value=np.nan)
 df1 = df1.replace(to_replace='M/PG', value=np.nan)
 df1 = df1.replace(to_replace='TV-G', value=np.nan)
 df1 = df1.replace(to_replace='TV-PG', value=np.nan)
@@ -28,8 +31,12 @@ df1 = df1.dropna(axis=0)
 df1 = df1.reset_index()
 df1.pop('index')
 
+
+
 # split the dataframe
 target = df1.pop('Rated')
+
+print(target.unique())
 
 # creates a list of the plots
 temp = df1.to_numpy().tolist()
@@ -86,7 +93,6 @@ test_dataset = testing.shuffle(test_size).batch(1)
 
 
 
-#Model stuff doesn't really work at all
 
 def makeModel(embed_dim, embed_out, lst_dim, batch_size):
     model = tf.keras.Sequential()
