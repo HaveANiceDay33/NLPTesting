@@ -1,7 +1,7 @@
 import tensorflow as tf
 import pandas as pd
 
-data = pd.read_csv("Data/IMBD_MOVIES.csv")
+data = pd.read_csv("Data/IMDB_MOVIES.csv")
 df1 = data[['Title', 'Rated', 'Plot']]
 
 

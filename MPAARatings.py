@@ -2,8 +2,10 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 
-data = pd.read_csv("Data/IMBD_MOVIES.csv")
+data = pd.read_csv("Data/IMDB_MOVIES.csv")
+data2 = pd.read_csv("Data/IMDB_MOVIES_2.csv")
 df1 = data[['Rated', 'Plot']]
+df2 = data2[['Rated', 'Plot']]
 
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
