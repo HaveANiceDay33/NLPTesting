@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow.keras as keras
 import pandas as pd
 import numpy as np
 
@@ -12,7 +13,7 @@ physical_devices = tf.config.experimental.list_physical_devices('GPU')
 assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
 config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-#data filtering
+# data filtering
 df1 = df1.replace(to_replace='NOT RATED', value=np.nan)
 df1 = df1.replace(to_replace='UNRATED', value=np.nan)
 df1 = df1.replace(to_replace='APPROVED', value=np.nan)
@@ -32,12 +33,8 @@ df1 = df1.dropna(axis=0)
 df1 = df1.reset_index()
 df1.pop('index')
 
-
-
 # split the dataframe
 target = df1.pop('Rated')
-
-print(target.unique())
 
 # creates a list of the plots
 temp = df1.to_numpy().tolist()
@@ -48,7 +45,7 @@ for i in range(len(temp)):
 
 # print(text)
 # create the tokenizer and fit it on the plots
-token = tf.keras.preprocessing.text.Tokenizer(num_words = 13561,char_level=False, split=' ',
+token = tf.keras.preprocessing.text.Tokenizer(num_words=13561, char_level=False, split=' ',
                                               filters='!"#$%&-()*+,./:;<=>?@[\\]^_`{|}~\t\n')
 token.fit_on_texts(text)
 
@@ -61,62 +58,84 @@ def int_to_text(input_sequence, tokenizer):
     return tokenizer.sequences_to_texts(input_sequence)
 
 
-intList = []
-targetList = []
+features = []
+labels = []
+
+cR = 0
+c13 = 0
+cPG = 0
+cG = 0
+cT = 0
 
 for i in range(len(df1.values)):
-    intList.append(text_to_int(df1.values[i][0], token))
+    features.append(text_to_int(df1.values[i][0], token))
 
     if target.values[i] == 'R':
-        targetList.append([1,0,0,0])
+        labels.append([1, 0, 0, 0])
+        cR += 1
     elif target.values[i] == 'PG-13':
-        targetList.append([0,1,0,0])
+        labels.append([0, 1, 0, 0])
+        c13 += 1
     elif target.values[i] == 'PG':
-        targetList.append([0,0,1,0])
+        labels.append([0, 0, 1, 0])
+        cPG += 1
     elif target.values[i] == 'G':
-        targetList.append([0,0,0,1])
+        labels.append([0, 0, 0, 1])
+        cG += 1
     else:
-        targetList.append(5)
+        labels.append(5)
+    cT += 1
 
+weight_for_r = (1 / cR) * cT / 2.0
+weight_for_pg13 = (1 / c13) * cT / 2.0
+weight_for_pg = (1 / cPG) * cT / 2.0
+weight_for_g = (1 / cG) * cT / 2.0
+
+# class_weights = {[1,0,0,0]: weight_for_r, [0,1,0,0]:weight_for_pg13, [0,0,1,0]:weight_for_pg, [0,0,0,1]:weight_for_g}
 
 test_size = 200
 
-dataList = tf.keras.preprocessing.sequence.pad_sequences(sequences=intList, padding='post', maxlen=25)
+dataList = tf.keras.preprocessing.sequence.pad_sequences(sequences=features, padding='post', maxlen=25)
 
-dataset = tf.data.Dataset.from_tensor_slices((dataList, targetList))
-dataset_shuffled = dataset.shuffle(len(targetList)-2)
+dataset = tf.data.Dataset.from_tensor_slices((dataList, labels)).batch(10)
+dataset_shuffled = dataset.shuffle(cT)
 
 testing = dataset_shuffled.take(test_size)
 training = dataset_shuffled.skip(test_size)
 
-train_dataset = training.shuffle(len(targetList)-test_size-1).batch(5)
-test_dataset = testing.shuffle(test_size).batch(1)
+train_dataset = training.shuffle(cT)
+test_dataset = testing.shuffle(test_size)
+
+metrics = [
+    keras.metrics.Accuracy(name='accuracy'),
+    keras.metrics.BinaryAccuracy(name='binaryAccuracy'),
+    keras.metrics.Precision(name='precision'),
+]
 
 
+def make_model(embed_dim, embed_out, lst_dim, metrics, output_bias=None):
+    if output_bias is not None:
+        output_bias = keras.initializers.Constant(output_bias)
 
+    model = keras.Sequential()
+    model.add(keras.layers.Embedding(embed_dim, embed_out, input_length=25))
+    model.add(keras.layers.Bidirectional(tf.keras.layers.LSTM(lst_dim * 2, return_sequences=True)))
+    model.add(keras.layers.Bidirectional(tf.keras.layers.LSTM(lst_dim)))
+    model.add(keras.layers.Dense(lst_dim, activation='relu'))
+    model.add(keras.layers.Dense(256))
+    model.add(keras.layers.Dense(64))
+    model.add(keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias))
 
-def makeModel(embed_dim, embed_out, lst_dim, batch_size):
-    model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Embedding(embed_dim, embed_out, input_length=25))
-    # model.add(tf.keras.layers.LSTM(lst_dim))
-    # model.add(tf.keras.layers.LSTM(lst_dim))
-    model.add(tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(lst_dim*2, return_sequences=True))),
-    model.add(tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(lst_dim)))
-    model.add(tf.keras.layers.Dense(lst_dim, activation='relu')),
-    model.add(tf.keras.layers.Dense(256)),
-    model.add(tf.keras.layers.Dense(64)),
-    model.add(tf.keras.layers.Dense(4,activation = 'relu')),
-    model.add(tf.keras.layers.Softmax())
+    model.compile(optimizer='adam',
+                  loss=keras.losses.BinaryCrossentropy(from_logits=True),
+                  metrics=['accuracy'])
+
     return model
 
-netMod = makeModel(token.num_words, 8, 256, 256)
-netMod.compile(optimizer='adam',
-              loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-              metrics=['accuracy'])
 
+netMod = make_model(token.num_words, 8, 256, metrics=metrics)
 print(netMod.summary())
 
-netMod.fit(train_dataset, epochs=5)
+netMod.fit(train_dataset, epochs=1)
 
 netMod.evaluate(test_dataset)
-
