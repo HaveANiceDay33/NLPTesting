@@ -127,10 +127,13 @@ def make_model(embed_dim, embed_out, lst_dim, output_bias=None):
 
     return model
 
+def train_save_model(model_name):
+    net_mod = make_model(token.num_words, 16, 256)
+    # print(net_mod.summary())
+    net_mod.fit(train_dataset, epochs=5, class_weight=class_weights)
+    net_mod.save('Checkpoints/{}'.format(model_name))
+    return net_mod
 
-netMod = make_model(token.num_words, 16, 256)
-print(netMod.summary())
 
-netMod.fit(train_dataset, epochs=5, class_weight=class_weights)
-
-netMod.evaluate(test_dataset)
+model = tf.keras.models.load_model('Checkpoints/first_model')
+model.evaluate(test_dataset)
