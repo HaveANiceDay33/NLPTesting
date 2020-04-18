@@ -131,9 +131,9 @@ def train_save_model(model_name):
     net_mod = make_model(token.num_words, 16, 256)
     # print(net_mod.summary())
     net_mod.fit(train_dataset, epochs=5, class_weight=class_weights)
-    net_mod.save('Checkpoints/{}'.format(model_name))
+    net_mod.save('Checkpoints\{}'.format(model_name))
     return net_mod
 
 
-model = tf.keras.models.load_model('Checkpoints/first_model')
+model = tf.keras.models.load_model('Checkpoints/Test_Model')
 model.evaluate(test_dataset)
