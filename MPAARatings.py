@@ -86,18 +86,18 @@ for i in range(len(df1.values)):
         labels.append(5)
     cT += 1
 
-weight_for_r = (1 / cR) * cT
-weight_for_pg13 = (1 / c13) * cT
-weight_for_pg = (1 / cPG) * cT
-weight_for_g = (1 / cG) * cT
+weight_for_r = (1 / cR) * cT / 10
+weight_for_pg13 = (1 / c13) * cT / 10
+weight_for_pg = (1 / cPG) * cT / 10
+weight_for_g = (1 / cG) * cT / 10
 
 class_weights = {0: weight_for_r, 1:weight_for_pg13, 2:weight_for_pg, 3:weight_for_g}
 
-test_size = 200
+test_size = 500
 
 dataList = tf.keras.preprocessing.sequence.pad_sequences(sequences=features, padding='post', maxlen=25)
 
-dataset = tf.data.Dataset.from_tensor_slices((dataList, labels)).batch(10)
+dataset = tf.data.Dataset.from_tensor_slices((dataList, labels)).batch(8)
 dataset_shuffled = dataset.shuffle(cT)
 
 testing = dataset_shuffled.take(test_size)
@@ -106,38 +106,31 @@ training = dataset_shuffled.skip(test_size)
 train_dataset = training.shuffle(cT)
 test_dataset = testing.shuffle(test_size)
 
-metrics = [
-    keras.metrics.Accuracy(name='accuracy'),
-    keras.metrics.BinaryAccuracy(name='binaryAccuracy'),
-    keras.metrics.Precision(name='precision'),
-]
+max_words = 25
 
-
-def make_model(embed_dim, embed_out, lst_dim, metrics, output_bias=None):
+def make_model(embed_dim, embed_out, lst_dim, output_bias=None):
     if output_bias is not None:
         output_bias = keras.initializers.Constant(output_bias)
 
     model = keras.Sequential()
-    model.add(keras.layers.Embedding(embed_dim, embed_out, input_length=25))
-    # model.add(keras.layers.Bidirectional(tf.keras.layers.LSTM(lst_dim * 2, return_sequences=True)))
-    # model.add(keras.layers.Bidirectional(tf.keras.layers.LSTM(lst_dim)))
+    model.add(keras.layers.Embedding(embed_dim, embed_out, input_length=max_words))
     model.add(keras.layers.Flatten())
     model.add(keras.layers.Dropout(0.1))
-    model.add(keras.layers.Dense(250, activation='relu'))
+    model.add(keras.layers.Dense(max_words*embed_out, activation='relu'))
     model.add(keras.layers.Dense(64))
-    model.add(keras.layers.Dense(4, activation='relu', bias_initializer=output_bias))
+    model.add(keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias))
     model.add(keras.layers.Softmax())
 
     model.compile(optimizer='adam',
-                  loss=keras.losses.CategoricalCrossentropy(from_logits=False),
+                  loss=keras.losses.CategoricalCrossentropy(),
                   metrics=['accuracy'])
 
     return model
 
 
-netMod = make_model(token.num_words, 16, 256, metrics=metrics)
+netMod = make_model(token.num_words, 16, 256)
 print(netMod.summary())
 
-netMod.fit(train_dataset, epochs=20, class_weight = class_weights)
+netMod.fit(train_dataset, epochs=5, class_weight=class_weights)
 
 netMod.evaluate(test_dataset)
