@@ -86,12 +86,12 @@ for i in range(len(df1.values)):
         labels.append(5)
     cT += 1
 
-weight_for_r = (1 / cR) * cT / 2.0
-weight_for_pg13 = (1 / c13) * cT / 2.0
-weight_for_pg = (1 / cPG) * cT / 2.0
-weight_for_g = (1 / cG) * cT / 2.0
+weight_for_r = (1 / cR) * cT
+weight_for_pg13 = (1 / c13) * cT
+weight_for_pg = (1 / cPG) * cT
+weight_for_g = (1 / cG) * cT
 
-# class_weights = {[1,0,0,0]: weight_for_r, [0,1,0,0]:weight_for_pg13, [0,0,1,0]:weight_for_pg, [0,0,0,1]:weight_for_g}
+class_weights = {0: weight_for_r, 1:weight_for_pg13, 2:weight_for_pg, 3:weight_for_g}
 
 test_size = 200
 
@@ -119,23 +119,25 @@ def make_model(embed_dim, embed_out, lst_dim, metrics, output_bias=None):
 
     model = keras.Sequential()
     model.add(keras.layers.Embedding(embed_dim, embed_out, input_length=25))
-    model.add(keras.layers.Bidirectional(tf.keras.layers.LSTM(lst_dim * 2, return_sequences=True)))
-    model.add(keras.layers.Bidirectional(tf.keras.layers.LSTM(lst_dim)))
-    model.add(keras.layers.Dense(lst_dim, activation='relu'))
-    model.add(keras.layers.Dense(256))
+    # model.add(keras.layers.Bidirectional(tf.keras.layers.LSTM(lst_dim * 2, return_sequences=True)))
+    # model.add(keras.layers.Bidirectional(tf.keras.layers.LSTM(lst_dim)))
+    model.add(keras.layers.Flatten())
+    model.add(keras.layers.Dropout(0.1))
+    model.add(keras.layers.Dense(250, activation='relu'))
     model.add(keras.layers.Dense(64))
-    model.add(keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias))
+    model.add(keras.layers.Dense(4, activation='relu', bias_initializer=output_bias))
+    model.add(keras.layers.Softmax())
 
     model.compile(optimizer='adam',
-                  loss=keras.losses.BinaryCrossentropy(from_logits=True),
+                  loss=keras.losses.CategoricalCrossentropy(from_logits=False),
                   metrics=['accuracy'])
 
     return model
 
 
-netMod = make_model(token.num_words, 8, 256, metrics=metrics)
+netMod = make_model(token.num_words, 16, 256, metrics=metrics)
 print(netMod.summary())
 
-netMod.fit(train_dataset, epochs=1)
+netMod.fit(train_dataset, epochs=20, class_weight = class_weights)
 
 netMod.evaluate(test_dataset)
