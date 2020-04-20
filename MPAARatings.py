@@ -43,7 +43,6 @@ text = []
 for i in range(len(temp)):
     text.append(temp[i][0])
 
-# print(text)
 # create the tokenizer and fit it on the plots
 token = tf.keras.preprocessing.text.Tokenizer(num_words=13561, char_level=False, split=' ',
                                               filters='!"#$%&-()*+,./:;<=>?@[\\]^_`{|}~\t\n')
@@ -129,11 +128,15 @@ def make_model(embed_dim, embed_out, lst_dim, output_bias=None):
 
 def train_save_model(model_name):
     net_mod = make_model(token.num_words, 16, 256)
-    # print(net_mod.summary())
+    print(net_mod.summary())
     net_mod.fit(train_dataset, epochs=5, class_weight=class_weights)
     net_mod.save('Checkpoints\{}'.format(model_name))
     return net_mod
 
+try:
+    model = tf.keras.models.load_model('Checkpoints/Test_Model')
+except:
+    model = train_save_model("Test_Model")
 
-model = tf.keras.models.load_model('Checkpoints/Test_Model')
+
 model.evaluate(test_dataset)
