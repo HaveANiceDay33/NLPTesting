@@ -114,7 +114,26 @@ def make_model(embed_dim, embed_out, lst_dim, output_bias=None):
     model = keras.Sequential()
     model.add(keras.layers.Embedding(embed_dim, embed_out, input_length=max_words))
     model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dropout(0.1))
+    model.add(keras.layers.Dense(max_words*embed_out, activation='relu'))
+    model.add(keras.layers.Dense(64))
+    model.add(keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias))
+    model.add(keras.layers.Softmax())
+
+    model.compile(optimizer='adam',
+                  loss=keras.losses.CategoricalCrossentropy(),
+                  metrics=['accuracy'])
+
+    return model
+
+def make_lstm_model(embed_dim, embed_out, lst_dim, output_bias=None):
+    if output_bias is not None:
+        output_bias = keras.initializers.Constant(output_bias)
+
+    model = keras.Sequential()
+    model.add(keras.layers.Embedding(embed_dim, embed_out, input_length=max_words))
+    model.add(keras.layers.SpatialDropout1D(0.1))
+    #model.add(keras.layers.LSTM(max_words, dropout=0.2, recurrent_dropout=0.2))
+    model.add(tf.compat.v1.keras.layers.CuDNNLSTM(max_words))
     model.add(keras.layers.Dense(max_words*embed_out, activation='relu'))
     model.add(keras.layers.Dense(64))
     model.add(keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias))
@@ -127,10 +146,12 @@ def make_model(embed_dim, embed_out, lst_dim, output_bias=None):
     return model
 
 def train_save_model(model_name):
+
     net_mod = make_model(token.num_words, 16, 256)
     print(net_mod.summary())
     net_mod.fit(train_dataset, epochs=5, class_weight=class_weights)
     net_mod.save('Checkpoints\{}'.format(model_name))
+
     return net_mod
 
 try:
@@ -138,5 +159,3 @@ try:
 except:
     model = train_save_model("Test_Model")
 
-
-model.evaluate(test_dataset)
