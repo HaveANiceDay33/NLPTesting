@@ -181,6 +181,20 @@ def make_simpleRNN_model(embed_dim, embed_out):
 
     return model
 
+def make_GRU_model(embed_dim, embed_out):
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(embed_dim, embed_out, input_length=max_words),
+        tf.keras.layers.GRU(embed_out),
+        tf.keras.layers.Dense(embed_out, activation='relu'),
+        tf.keras.layers.Dense(4, activation='softmax')
+    ])
+
+    model.compile(optimizer='adam',
+                  loss=keras.losses.CategoricalCrossentropy(),
+                  metrics=['accuracy'])
+
+    return model
+
 def make_CNN_model(embed_dim, embed_out):
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(embed_dim, embed_out),
@@ -210,8 +224,10 @@ def train_save_model(model_name, model):
 #running_model = make_lstm_model2(token.num_words, 64)
 #running_model = make_lstm_model(token.num_words, 64)
 #running_model = make_fully_connected_model(token.num_words, 8)
-running_model = make_simpleRNN_model(token.num_words, 64)
+#running_model = make_simpleRNN_model(token.num_words, 64)
 #running_model = make_CNN_model(token.num_words, 64)
+running_model = make_GRU_model(token.num_words,64)
+
 
 try:
     model = tf.keras.models.load_model('Checkpoints/Test_Model')
