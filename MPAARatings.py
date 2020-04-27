@@ -93,8 +93,9 @@ weight_for_g = (1 / cG) * cT / 10
 class_weights = {0: weight_for_r, 1: weight_for_pg13, 2: weight_for_pg, 3: weight_for_g}
 
 test_size = 500
+max_words = 25
 
-dataList = tf.keras.preprocessing.sequence.pad_sequences(sequences=features, padding='post', maxlen=25)
+dataList = tf.keras.preprocessing.sequence.pad_sequences(sequences=features, padding='post', maxlen=max_words)
 
 dataset = tf.data.Dataset.from_tensor_slices((dataList, labels)).batch(8)
 dataset_shuffled = dataset.shuffle(cT)
@@ -104,9 +105,6 @@ training = dataset_shuffled.skip(test_size)
 
 train_dataset = training.shuffle(cT)
 test_dataset = testing.shuffle(test_size)
-
-max_words = 25
-
 
 def make_model(embed_dim, embed_out, output_bias=None):
     if output_bias is not None:
@@ -150,7 +148,7 @@ def make_lstm_model(embed_dim, embed_out, output_bias=None):
 
 def make_lstm_model2(embed_dim, embed_out):
     model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(embed_dim, embed_out),
+        tf.keras.layers.Embedding(embed_dim, embed_out, input_length=max_words),
         tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(embed_out)),
         #    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32)),
         # use ReLU in place of tanh function since they are very good alternatives of each other.
@@ -168,9 +166,24 @@ def make_lstm_model2(embed_dim, embed_out):
 
 def make_simpleRNN_model(embed_dim, embed_out):
     model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(embed_dim, embed_out),
+        tf.keras.layers.Embedding(embed_dim, embed_out, input_length=max_words),
         tf.keras.layers.SimpleRNN(embed_out),
         tf.keras.layers.Dense(embed_out, activation='relu'),
+        tf.keras.layers.Dense(4, activation='softmax')
+    ])
+
+    model.compile(optimizer='adam',
+                  loss=keras.losses.CategoricalCrossentropy(),
+                  metrics=['accuracy'])
+
+    return model
+
+def make_CNN_model(embed_dim, embed_out):
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(embed_dim, embed_out),
+        tf.keras.layers.Conv1D(kernel_size=max_words, filters=5, activation='relu'),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(10, activation='relu'),
         tf.keras.layers.Dense(4, activation='softmax')
     ])
 
@@ -193,9 +206,12 @@ def train_save_model(model_name, model):
 #running_model = make_lstm_model2(token.num_words, 64)
 #running_model = make_lstm_model(token.num_words, 64)
 #running_model = make_fully_connected_model(token.num_words, 8)
-running_model = make_simpleRNN_model(token.num_words, 64)
+#running_model = make_simpleRNN_model(token.num_words, 64)
+#running_model = make_CNN_model(token.num_words, 64)
 
 try:
     model = tf.keras.models.load_model('Checkpoints/Test_Model')
 except:
     model = train_save_model("Test_Model", running_model)
+
+model.evaluate(test_dataset)
