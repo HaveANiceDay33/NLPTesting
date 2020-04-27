@@ -90,7 +90,7 @@ weight_for_pg13 = (1 / c13) * cT / 10
 weight_for_pg = (1 / cPG) * cT / 10
 weight_for_g = (1 / cG) * cT / 10
 
-class_weights = {0: weight_for_r, 1:weight_for_pg13, 2:weight_for_pg, 3:weight_for_g}
+class_weights = {0: weight_for_r, 1: weight_for_pg13, 2: weight_for_pg, 3: weight_for_g}
 
 test_size = 500
 
@@ -107,6 +107,7 @@ test_dataset = testing.shuffle(test_size)
 
 max_words = 25
 
+
 def make_model(embed_dim, embed_out, lst_dim, output_bias=None):
     if output_bias is not None:
         output_bias = keras.initializers.Constant(output_bias)
@@ -114,7 +115,7 @@ def make_model(embed_dim, embed_out, lst_dim, output_bias=None):
     model = keras.Sequential()
     model.add(keras.layers.Embedding(embed_dim, embed_out, input_length=max_words))
     model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dense(max_words*embed_out, activation='relu'))
+    model.add(keras.layers.Dense(max_words * embed_out, activation='relu'))
     model.add(keras.layers.Dense(64))
     model.add(keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias))
     model.add(keras.layers.Softmax())
@@ -124,6 +125,7 @@ def make_model(embed_dim, embed_out, lst_dim, output_bias=None):
                   metrics=['accuracy'])
 
     return model
+
 
 def make_lstm_model(embed_dim, embed_out, lst_dim, output_bias=None):
     if output_bias is not None:
@@ -132,9 +134,9 @@ def make_lstm_model(embed_dim, embed_out, lst_dim, output_bias=None):
     model = keras.Sequential()
     model.add(keras.layers.Embedding(embed_dim, embed_out, input_length=max_words))
     model.add(keras.layers.SpatialDropout1D(0.1))
-    #model.add(keras.layers.LSTM(max_words, dropout=0.2, recurrent_dropout=0.2))
+    # model.add(keras.layers.LSTM(max_words, dropout=0.2, recurrent_dropout=0.2))
     model.add(tf.compat.v1.keras.layers.CuDNNLSTM(max_words))
-    model.add(keras.layers.Dense(max_words*embed_out, activation='relu'))
+    model.add(keras.layers.Dense(max_words * embed_out, activation='relu'))
     model.add(keras.layers.Dense(64))
     model.add(keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias))
     model.add(keras.layers.Softmax())
@@ -145,17 +147,36 @@ def make_lstm_model(embed_dim, embed_out, lst_dim, output_bias=None):
 
     return model
 
-def train_save_model(model_name):
 
-    net_mod = make_model(token.num_words, 16, 256)
+def make_lstm_model2(embed_dim, embed_out, lst_dim, output_bias=None):
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(embed_dim, embed_out),
+        tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(embed_out)),
+        #    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32)),
+        # use ReLU in place of tanh function since they are very good alternatives of each other.
+        tf.keras.layers.Dense(embed_out, activation='relu'),
+        # Add a Dense layer with 6 units and softmax activation.
+        # When we have multiple outputs, softmax convert outputs layers into a probability distribution.
+        tf.keras.layers.Dense(4, activation='softmax')
+    ])
+
+    model.compile(optimizer='adam',
+                  loss=keras.losses.CategoricalCrossentropy(),
+                  metrics=['accuracy'])
+
+    return model
+
+
+def train_save_model(model_name):
+    net_mod = make_lstm_model2(token.num_words, 64, 256)
     print(net_mod.summary())
     net_mod.fit(train_dataset, epochs=5, class_weight=class_weights)
     net_mod.save('Checkpoints\{}'.format(model_name))
 
     return net_mod
 
+
 try:
     model = tf.keras.models.load_model('Checkpoints/Test_Model')
 except:
     model = train_save_model("Test_Model")
-
