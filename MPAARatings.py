@@ -108,7 +108,7 @@ test_dataset = testing.shuffle(test_size)
 max_words = 25
 
 
-def make_model(embed_dim, embed_out, lst_dim, output_bias=None):
+def make_model(embed_dim, embed_out, output_bias=None):
     if output_bias is not None:
         output_bias = keras.initializers.Constant(output_bias)
 
@@ -166,8 +166,19 @@ def make_lstm_model2(embed_dim, embed_out):
 
     return model
 
-def simpleRNN(embed_dim, embed_out):
-    return 0
+def make_simpleRNN_model(embed_dim, embed_out):
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(embed_dim, embed_out),
+        tf.keras.layers.SimpleRNN(embed_out),
+        tf.keras.layers.Dense(embed_out, activation='relu'),
+        tf.keras.layers.Dense(4, activation='softmax')
+    ])
+
+    model.compile(optimizer='adam',
+                  loss=keras.losses.CategoricalCrossentropy(),
+                  metrics=['accuracy'])
+
+    return model
 
 
 
@@ -179,12 +190,12 @@ def train_save_model(model_name, model):
 
     return net_mod
 
-running_model = make_lstm_model2(token.num_words, 64)
+#running_model = make_lstm_model2(token.num_words, 64)
 #running_model = make_lstm_model(token.num_words, 64)
 #running_model = make_fully_connected_model(token.num_words, 8)
-
+running_model = make_simpleRNN_model(token.num_words, 64)
 
 try:
-    model = tf.keras.models.load_model('Checkpoints/Test_Model', running_model)
+    model = tf.keras.models.load_model('Checkpoints/Test_Model')
 except:
-    model = train_save_model("Test_Model")
+    model = train_save_model("Test_Model", running_model)
