@@ -1,7 +1,10 @@
+from datetime import time
+
 import tensorflow as tf
 import tensorflow.keras as keras
 import pandas as pd
 import numpy as np
+from tensorflow.keras.callbacks import TensorBoard
 
 data = pd.read_csv("Data/IMDB_MOVIES.csv")
 data2 = pd.read_csv("Data/IMDB_MOVIES_2.csv")
@@ -198,7 +201,8 @@ def make_CNN_model(embed_dim, embed_out):
 def train_save_model(model_name, model):
     net_mod = model
     print(net_mod.summary())
-    net_mod.fit(train_dataset, epochs=5, class_weight=class_weights)
+    tb = TensorBoard(log_dir='logs\{}'.format(model_name))
+    net_mod.fit(train_dataset, epochs=5, class_weight=class_weights, callbacks=[tb])
     net_mod.save('Checkpoints\{}'.format(model_name))
 
     return net_mod
@@ -206,7 +210,7 @@ def train_save_model(model_name, model):
 #running_model = make_lstm_model2(token.num_words, 64)
 #running_model = make_lstm_model(token.num_words, 64)
 #running_model = make_fully_connected_model(token.num_words, 8)
-#running_model = make_simpleRNN_model(token.num_words, 64)
+running_model = make_simpleRNN_model(token.num_words, 64)
 #running_model = make_CNN_model(token.num_words, 64)
 
 try:
