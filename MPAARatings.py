@@ -127,7 +127,7 @@ def make_model(embed_dim, embed_out, lst_dim, output_bias=None):
     return model
 
 
-def make_lstm_model(embed_dim, embed_out, lst_dim, output_bias=None):
+def make_lstm_model(embed_dim, embed_out, output_bias=None):
     if output_bias is not None:
         output_bias = keras.initializers.Constant(output_bias)
 
@@ -148,7 +148,7 @@ def make_lstm_model(embed_dim, embed_out, lst_dim, output_bias=None):
     return model
 
 
-def make_lstm_model2(embed_dim, embed_out, lst_dim, output_bias=None):
+def make_lstm_model2(embed_dim, embed_out):
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(embed_dim, embed_out),
         tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(embed_out)),
@@ -166,17 +166,25 @@ def make_lstm_model2(embed_dim, embed_out, lst_dim, output_bias=None):
 
     return model
 
+def simpleRNN(embed_dim, embed_out):
+    return 0
 
-def train_save_model(model_name):
-    net_mod = make_lstm_model2(token.num_words, 64, 256)
+
+
+def train_save_model(model_name, model):
+    net_mod = model
     print(net_mod.summary())
     net_mod.fit(train_dataset, epochs=5, class_weight=class_weights)
     net_mod.save('Checkpoints\{}'.format(model_name))
 
     return net_mod
 
+running_model = make_lstm_model2(token.num_words, 64)
+#running_model = make_lstm_model(token.num_words, 64)
+#running_model = make_fully_connected_model(token.num_words, 8)
+
 
 try:
-    model = tf.keras.models.load_model('Checkpoints/Test_Model')
+    model = tf.keras.models.load_model('Checkpoints/Test_Model', running_model)
 except:
     model = train_save_model("Test_Model")
