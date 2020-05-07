@@ -1,5 +1,4 @@
-from datetime import time
-
+import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow.keras as keras
 import pandas as pd
@@ -71,7 +70,6 @@ cT = 0
 
 for i in range(len(df1.values)):
     features.append(text_to_int(df1.values[i][0], token))
-
     if target.values[i] == 'R':
         labels.append([1, 0, 0, 0])
         cR += 1
@@ -96,18 +94,20 @@ weight_for_g = (1 / cG) * cT / 10
 class_weights = {0: weight_for_r, 1: weight_for_pg13, 2: weight_for_pg, 3: weight_for_g}
 
 test_size = 500
-max_words = 25
+max_words = 40
 
 dataList = tf.keras.preprocessing.sequence.pad_sequences(sequences=features, padding='post', maxlen=max_words)
 
-dataset = tf.data.Dataset.from_tensor_slices((dataList, labels)).batch(8)
+dataset = tf.data.Dataset.from_tensor_slices((dataList, labels)).batch(50, drop_remainder=True).repeat(5)
+
 dataset_shuffled = dataset.shuffle(cT)
 
 testing = dataset_shuffled.take(test_size)
 training = dataset_shuffled.skip(test_size)
 
-train_dataset = training.shuffle(cT)
+train_dataset = training.shuffle(cT, reshuffle_each_iteration=True)
 test_dataset = testing.shuffle(test_size)
+
 
 def make_model(embed_dim, embed_out, output_bias=None):
     if output_bias is not None:
@@ -167,6 +167,7 @@ def make_lstm_model2(embed_dim, embed_out):
 
     return model
 
+
 def make_simpleRNN_model(embed_dim, embed_out):
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(embed_dim, embed_out, input_length=max_words),
@@ -180,6 +181,7 @@ def make_simpleRNN_model(embed_dim, embed_out):
                   metrics=['accuracy'])
 
     return model
+
 
 def make_GRU_model(embed_dim, embed_out):
     model = tf.keras.Sequential([
@@ -195,6 +197,7 @@ def make_GRU_model(embed_dim, embed_out):
 
     return model
 
+
 def make_CNN_model(embed_dim, embed_out):
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(embed_dim, embed_out),
@@ -206,28 +209,31 @@ def make_CNN_model(embed_dim, embed_out):
 
     model.compile(optimizer='adam',
                   loss=keras.losses.CategoricalCrossentropy(),
-                  metrics=['accuracy'])
+                  metrics=['accuracy', 'loss'])
 
     return model
-
 
 
 def train_save_model(model_name, model):
     net_mod = model
     print(net_mod.summary())
     tb = TensorBoard(log_dir='logs\{}'.format(model_name))
-    net_mod.fit(train_dataset, epochs=5, class_weight=class_weights, callbacks=[tb])
+    history = net_mod.fit(train_dataset, epochs=10, class_weight=class_weights, callbacks=[tb])
+    plt.plot(history.history['accuracy'])
+    plt.show()
+    plt.plot(history.history['loss'])
+    plt.show()
     net_mod.save('Checkpoints\{}'.format(model_name))
 
     return net_mod
 
-#running_model = make_lstm_model2(token.num_words, 64)
-#running_model = make_lstm_model(token.num_words, 64)
-#running_model = make_fully_connected_model(token.num_words, 8)
-#running_model = make_simpleRNN_model(token.num_words, 64)
-#running_model = make_CNN_model(token.num_words, 64)
-running_model = make_GRU_model(token.num_words,64)
 
+# running_model = make_lstm_model2(token.num_words, 64)
+# running_model = make_lstm_model(token.num_words, 64)
+# running_model = make_fully_connected_model(token.num_words, 8)
+# running_model = make_simpleRNN_model(token.num_words, 64)
+# running_model = make_CNN_model(token.num_words, 64)
+running_model = make_GRU_model(token.num_words, 64)
 
 try:
     model = tf.keras.models.load_model('Checkpoints/Test_Model')
