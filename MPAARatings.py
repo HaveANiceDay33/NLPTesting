@@ -4,16 +4,15 @@ import tensorflow.keras as keras
 import pandas as pd
 import numpy as np
 from tensorflow.keras.callbacks import TensorBoard
+import tensorflow_model_optimization as tfmot
+
+
 
 data = pd.read_csv("Data/IMDB_MOVIES.csv")
 data2 = pd.read_csv("Data/IMDB_MOVIES_2.csv")
 df1 = data[['Rated', 'Plot']]
 df2 = data2[['Rated', 'Plot']]
 df1 = pd.concat([df1, df2])
-
-physical_devices = tf.config.experimental.list_physical_devices('GPU')
-assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
-config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # data filtering
 df1 = df1.replace(to_replace='NOT RATED', value=np.nan)
@@ -228,16 +227,38 @@ def train_save_model(model_name, model):
     return net_mod
 
 
+def prune_loaded_model(file_path):
+    model_in = tf.keras.models.load_model(file_path)
+    try:
+        model_in = tfmot.sparsity.keras.prune_low_magnitude(model_in)
+    except ValueError:
+        print("Model has unprunable layer, continuing without pruning")
+    finally:
+        model_in.compile(optimizer='adam',
+                  loss=keras.losses.CategoricalCrossentropy(),
+                  metrics=['accuracy'])
+    return model_in
+
+
 # running_model = make_lstm_model2(token.num_words, 64)
 # running_model = make_lstm_model(token.num_words, 64)
 # running_model = make_fully_connected_model(token.num_words, 8)
 # running_model = make_simpleRNN_model(token.num_words, 64)
 # running_model = make_CNN_model(token.num_words, 64)
-running_model = make_GRU_model(token.num_words, 64)
+# running_model = make_GRU_model(token.num_words, 64)
+# running_model = make_model(token.num_words,64)
+running_model = prune_loaded_model("Checkpoints/Test_Model")
 
+
+'''
 try:
-    model = tf.keras.models.load_model('Checkpoints/Test_Model')
+    model = tf.keras.models.load_model('Checkpoints/make_model')
 except:
-    model = train_save_model("Test_Model", running_model)
+    physical_devices = tf.config.experimental.list_physical_devices('GPU')
+    assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+    config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-model.evaluate(test_dataset)
+    model = train_save_model("make_Model", running_model)
+'''
+
+running_model.evaluate(test_dataset)
