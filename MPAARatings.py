@@ -3,10 +3,15 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import pandas as pd
 import numpy as np
+from keras.callbacks import CSVLogger
 from tensorflow.keras.callbacks import TensorBoard
 import tensorflow_model_optimization as tfmot
 
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
+config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
+csv_logger = CSVLogger('training.log')
 
 data = pd.read_csv("Data/IMDB_MOVIES.csv")
 data2 = pd.read_csv("Data/IMDB_MOVIES_2.csv")
@@ -97,7 +102,7 @@ max_words = 40
 
 dataList = tf.keras.preprocessing.sequence.pad_sequences(sequences=features, padding='post', maxlen=max_words)
 
-dataset = tf.data.Dataset.from_tensor_slices((dataList, labels)).batch(50, drop_remainder=True).repeat(5)
+dataset = tf.data.Dataset.from_tensor_slices((dataList, labels)).batch(85, drop_remainder=True).repeat(5)
 
 dataset_shuffled = dataset.shuffle(cT)
 
@@ -217,7 +222,7 @@ def train_save_model(model_name, model):
     net_mod = model
     print(net_mod.summary())
     tb = TensorBoard(log_dir='logs\{}'.format(model_name))
-    history = net_mod.fit(train_dataset, epochs=10, class_weight=class_weights, callbacks=[tb])
+    history = net_mod.fit(train_dataset, epochs=50, class_weight=class_weights, callbacks=[csv_logger])
     plt.plot(history.history['accuracy'])
     plt.show()
     plt.plot(history.history['loss'])
@@ -243,22 +248,18 @@ def prune_loaded_model(file_path):
 # running_model = make_lstm_model2(token.num_words, 64)
 # running_model = make_lstm_model(token.num_words, 64)
 # running_model = make_fully_connected_model(token.num_words, 8)
-# running_model = make_simpleRNN_model(token.num_words, 64)
+running_model = make_simpleRNN_model(token.num_words, 64)
 # running_model = make_CNN_model(token.num_words, 64)
 # running_model = make_GRU_model(token.num_words, 64)
 # running_model = make_model(token.num_words,64)
-running_model = prune_loaded_model("Checkpoints/Test_Model")
+#running_model = prune_loaded_model("Checkpoints/Test_Model")
 
 
-'''
+
 try:
     model = tf.keras.models.load_model('Checkpoints/make_model')
 except:
-    physical_devices = tf.config.experimental.list_physical_devices('GPU')
-    assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
-    config = tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    model = train_save_model("make_model", running_model)
 
-    model = train_save_model("make_Model", running_model)
-'''
 
 running_model.evaluate(test_dataset)
