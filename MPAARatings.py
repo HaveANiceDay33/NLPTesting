@@ -113,7 +113,7 @@ train_dataset = training.shuffle(cT, reshuffle_each_iteration=True)
 test_dataset = testing.shuffle(test_size)
 
 
-def make_model(embed_dim, embed_out, output_bias=None):
+def make_fully_connected_model(embed_dim, embed_out, output_bias=None):
     if output_bias is not None:
         output_bias = keras.initializers.Constant(output_bias)
 
@@ -132,13 +132,15 @@ def make_model(embed_dim, embed_out, output_bias=None):
     return model
 
 
-def make_pruned_model(embed_dim,embed_out,output_bias=None):
+def make_pruned_fc_model(embed_dim,embed_out,output_bias=None):
     try:
-        model = tf.keras.models.load_model('Checkpoints/Make_Model')
+        model = tf.keras.models.load_model('Models/Make_Model')
     except:
-        normModel = make_model(embed_dim, embed_out)
-        model = train_save_model("Make_Model", normModel)
-    pruned_model = prune_loaded_model("Checkpoints/Make_Model")
+        normModel = make_fully_connected_model(embed_dim, embed_out)
+        save_model("Models/FCNN", normModel)
+        #model = train_save_model("Make_Model", normModel)
+
+    pruned_model = prune_loaded_model("Models/FCNN")
     return pruned_model
 
 
@@ -293,37 +295,44 @@ def make_CNN_model(embed_dim, embed_out):
 
     model.compile(optimizer='adam',
                   loss=keras.losses.CategoricalCrossentropy(),
-                  metrics=['accuracy', 'loss'])
+                  metrics=['accuracy'])
 
     return model
 
 
 def make_pruned_CNN_model(embed_dim,embed_out,output_bias=None):
     try:
-        model = tf.keras.models.load_model('Checkpoints/Make_Model')
+        model = tf.keras.models.load_model('Models/CNN')
     except:
         normModel = make_CNN_model(embed_dim, embed_out)
-        model = train_save_model("Make_Model", normModel)
-    pruned_model = prune_loaded_model("Checkpoints/Make_Model")
+        save_model("Models/CNN", normModel)
+        #model = train_model("CNN", normModel)
+
+    pruned_model = prune_loaded_model("Models/CNN")
     return pruned_model
 
+def save_model(model_name, model):
+    net_mod = model
+    net_mod.save('Models\{}'.format(model_name))
 
-def train_save_model(model_name, model):
+def train_model(model, model_name):
     net_mod = model
     print(net_mod.summary())
-    tb = TensorBoard(log_dir='logs\{}'.format(model_name))
     history = net_mod.fit(train_dataset, epochs=50, class_weight=class_weights, callbacks=[csv_logger])
-    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['accuracy'], label = 'Accuracy')
+    plt.plot(history.history['loss'], label = 'loss')
+    plt.title('Training metrics for '+model_name)
+    plt.xlabel('Epoch')
+    plt.ylabel('Value')
+    plt.legend()
     plt.show()
-    plt.plot(history.history['loss'])
-    plt.show()
-    net_mod.save('Checkpoints\{}'.format(model_name))
 
     return net_mod
 
 
 def prune_loaded_model(file_path):
     model_in = tf.keras.models.load_model(file_path)
+
     try:
         model_in = tfmot.sparsity.keras.prune_low_magnitude(model_in)
     except ValueError:
@@ -334,22 +343,31 @@ def prune_loaded_model(file_path):
                   metrics=['accuracy'])
     return model_in
 
+dense_models = []
+dense_names = ["LSTM v2", "LSTM v1", "Fully Connected Model","Simple Recurrent Neural Network", "Convolutional Neural Network", "Gated Recurrent Unit Model"]
 
-# running_model = make_lstm_model2(token.num_words, 64)
-# running_model = make_lstm_model(token.num_words, 64)
-# running_model = make_fully_connected_model(token.num_words, 8)
-running_model = make_simpleRNN_model(token.num_words, 64)
-# running_model = make_CNN_model(token.num_words, 64)
-# running_model = make_GRU_model(token.num_words, 64)
-# running_model = make_model(token.num_words,64)
-#running_model = prune_loaded_model("Checkpoints/Test_Model")
+running_model1 = make_lstm_model2(token.num_words, 64)
+running_model2 = make_lstm_model(token.num_words, 64)
+running_model3 = make_fully_connected_model(token.num_words, 8)
+running_model4 = make_simpleRNN_model(token.num_words, 64)
+running_model5 = make_CNN_model(token.num_words, 64)
+running_model6 = make_GRU_model(token.num_words, 64)
+
+dense_models.append(running_model1)
+dense_models.append(running_model2)
+dense_models.append(running_model3)
+dense_models.append(running_model4)
+dense_models.append(running_model5)
+dense_models.append(running_model6)
+counter = 0
+for model in dense_models:
+    train_model(model, dense_names[counter])
+    counter+=1
+
+# try:
+#     model = tf.keras.models.load_model('Checkpoints/make_model')
+# except:
+#     model = train_save_model("make_model", running_model)
 
 
-
-try:
-    model = tf.keras.models.load_model('Checkpoints/make_model')
-except:
-    model = train_save_model("make_model", running_model)
-
-
-running_model.evaluate(test_dataset)
+#running_model.evaluate(test_dataset)
