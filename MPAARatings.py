@@ -145,9 +145,6 @@ def make_fully_connected_model(embed_dim, embed_out, output_bias=None):
 
 
 def make_pruned_fc_model(embed_dim, embed_out, pp):
-    # try:
-    #     model = tf.keras.models.load_model('Models/FCNN')
-    # except:
     normModel = make_fully_connected_model(embed_dim, embed_out)
     save_model("FCNN", normModel)
 
@@ -159,15 +156,13 @@ def make_lstm_model(embed_dim, embed_out, output_bias=None):
     if output_bias is not None:
         output_bias = keras.initializers.Constant(output_bias)
 
-    model = keras.Sequential()
-    model.add(keras.layers.Embedding(embed_dim, embed_out, input_length=max_words))
-    model.add(keras.layers.SpatialDropout1D(0.1))
-    # model.add(keras.layers.LSTM(max_words, dropout=0.2, recurrent_dropout=0.2))
-    model.add(tf.compat.v1.keras.layers.CuDNNLSTM(max_words))
-    model.add(keras.layers.Dense(max_words * embed_out, activation='relu'))
-    model.add(keras.layers.Dense(64))
-    model.add(keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias))
-    model.add(keras.layers.Softmax())
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(embed_dim, embed_out, input_length=max_words),
+        tf.keras.layers.LSTM(embed_out * 4, return_sequences=True),
+        tf.keras.layers.LSTM(embed_out),
+        tf.keras.layers.Dense(embed_out, activation='relu'),
+        tf.keras.layers.Dense(4, activation='softmax', bias_initializer=output_bias),
+    ])
 
     model.compile(optimizer='adam',
                   loss=keras.losses.CategoricalCrossentropy(),
@@ -180,20 +175,15 @@ def make_pruned_lstm_model(embed_dim, embed_out, pp, output_bias=None):
     if output_bias is not None:
         output_bias = keras.initializers.Constant(output_bias)
 
-    model = keras.Sequential()
-    model.add(
-        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Embedding(embed_dim, embed_out, input_length=max_words),
-        **pp))
-    model.add(keras.layers.SpatialDropout1D(0.1))
-    # model.add(keras.layers.LSTM(max_words, dropout=0.2, recurrent_dropout=0.2))
-    model.add(tf.compat.v1.keras.layers.CuDNNLSTM(max_words))
-    model.add(tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(max_words * embed_out, activation='relu'),
-              **pp))
-    model.add(tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(64), **pp))
-    model.add(tfmot.sparsity.keras.prune_low_magnitude(
-        tf.keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias), **pp))
-    model.add(keras.layers.Softmax())
-
+    model = keras.Sequential([
+        tfmot.sparsity.keras.prune_low_magnitude(
+            tf.keras.layers.Embedding(embed_dim, embed_out, input_length=max_words), **pp),
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.LSTM(embed_out * 4, return_sequences=True)),
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.LSTM(embed_out), **pp),
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(embed_out, activation='relu'), **pp),
+        tfmot.sparsity.keras.prune_low_magnitude(
+            tf.keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias), **pp),
+    ])
     model.compile(optimizer='adam',
                   loss=keras.losses.CategoricalCrossentropy(),
                   metrics=['accuracy'])
@@ -204,12 +194,10 @@ def make_pruned_lstm_model(embed_dim, embed_out, pp, output_bias=None):
 def make_lstm_model2(embed_dim, embed_out):
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(embed_dim, embed_out, input_length=max_words),
-        tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(embed_out)),
-        #    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32)),
-        # use ReLU in place of tanh function since they are very good alternatives of each other.
+        tf.keras.layers.LSTM(embed_out * 4, return_sequences=True),
+        tf.keras.layers.LSTM(embed_out * 4, go_backwards=True, return_sequences=True),
+        tf.keras.layers.LSTM(embed_out),
         tf.keras.layers.Dense(embed_out, activation='relu'),
-        # Add a Dense layer with 6 units and softmax activation.
-        # When we have multiple outputs, softmax convert outputs layers into a probability distribution.
         tf.keras.layers.Dense(4, activation='softmax')
     ])
 
@@ -224,13 +212,11 @@ def make_lstm_pruned_model2(embed_dim, embed_out, pp):
     model = tf.keras.Sequential([
         tfmot.sparsity.keras.prune_low_magnitude(
             tf.keras.layers.Embedding(embed_dim, embed_out, input_length=max_words), **pp),
-        tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(embed_out)),
-        #    tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32)),
-        # use ReLU in place of tanh function since they are very good alternatives of each other.
-        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(embed_out, activation='relu'),
-                                                 **pp),
-        # Add a Dense layer with 6 units and softmax activation.
-        # When we have multiple outputs, softmax convert outputs layers into a probability distribution.
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.LSTM(embed_out * 4, return_sequences=True), **pp),
+        tfmot.sparsity.keras.prune_low_magnitude(
+            tf.keras.layers.LSTM(embed_out * 4, go_backwards=True, return_sequences=True), **pp),
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.LSTM(embed_out), **pp),
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(embed_out, activation='relu'), **pp),
         tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(4, activation='softmax'), **pp)
     ])
 
@@ -260,7 +246,7 @@ def make_simple_pruned_RNN_model(embed_dim, embed_out, pp):
     model = tf.keras.Sequential([
         tfmot.sparsity.keras.prune_low_magnitude(
             tf.keras.layers.Embedding(embed_dim, embed_out, input_length=max_words), **pp),
-        tf.keras.layers.SimpleRNN(embed_out),
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.SimpleRNN(embed_out)),
         tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(embed_out, activation='relu'),
                                                  **pp),
         tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(4, activation='softmax'), **pp)
@@ -291,7 +277,7 @@ def make_GRU_model(embed_dim, embed_out):
 def make_pruned_GRU_model(embed_dim, embed_out, pp):
     model = tf.keras.Sequential([
         tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Embedding(embed_dim, embed_out), **pp),
-        tf.keras.layers.GRU(embed_out),
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.GRU(embed_out)),
         tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(embed_out, activation='relu'),
                                                  **pp),
         tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(4, activation='softmax'), **pp)
@@ -336,26 +322,29 @@ def save_model(model_name, model):
     net_mod = model
     net_mod.save('Models\{}'.format(model_name))
 
+
 callbacks = [
     csv_logger,
     sparsity.UpdatePruningStep(),
     sparsity.PruningSummaries(log_dir="logs/", profile_batch=0)
 ]
+
+
 def train_model(model, graph_title, file_name):
     net_mod = model
     print(net_mod.summary())
-    history = net_mod.fit(train_dataset, epochs=50, class_weight=class_weights, callbacks=callbacks)
+    history = net_mod.fit(train_dataset, epochs=150, class_weight=class_weights, callbacks=callbacks)
     plt.plot(history.history['accuracy'], label='Accuracy')
     plt.plot(history.history['loss'], label='Loss')
     plt.plot([0, 50], [1, 1], 'g--', alpha=0.4)
     plt.title('Training metrics for ' + graph_title)
     plt.xlabel('Epoch')
     plt.ylabel('Value')
-    plt.xlim(0, 50)
+    plt.xlim(0, 150)
     plt.ylim(0, 1.05)
     plt.legend()
     plt.grid(True)
-    plt.savefig('Graphs/'+file_name)
+    plt.savefig('Graphs/' + file_name)
     plt.close()
 
     return net_mod
@@ -395,30 +384,30 @@ dense_models.append(running_model6)
 counter = 0
 
 for model in dense_models:
-    train_model(model, dense_names[counter],dense_names[counter]+"/"+ dense_names[counter]+"dense")
+    train_model(model, dense_names[counter], dense_names[counter] + "/" + dense_names[counter] + "dense")
     counter += 1
 
-for y in range(6):
+for y in range(0, 6):
     for x in range(10):
         fs = x / 10
         if fs == 1:
             fs = 0.99
         pp = set_pruning_params(fs, 0, frequency=10)
-        file_name =dense_names[y] + "/" + str(dense_names[y]+"_"+str(fs*100)+"sparsity").replace('.0','')
-        title_name = dense_names[y] + " " + str(fs*100) + "% Sparsity"
+        file_name = dense_names[y] + "/" + str(dense_names[y] + "_" + str(fs * 100) + "sparsity").replace('.0', '')
+        title_name = dense_names[y] + " " + str(fs * 100) + "% Sparsity"
         print(file_name)
         if y == 0:
             train_model(make_lstm_pruned_model2(token.num_words, 64, pp), title_name, file_name)
         if y == 1:
-             train_model(make_pruned_lstm_model(token.num_words, 64, pp), title_name, file_name)
+            train_model(make_pruned_lstm_model(token.num_words, 64, pp), title_name, file_name)
         if y == 2:
             train_model(make_pruned_fc_model(token.num_words, 8, pp), title_name, file_name)
         if y == 3:
-             train_model(make_simple_pruned_RNN_model(token.num_words, 64, pp), title_name, file_name)
+            train_model(make_simple_pruned_RNN_model(token.num_words, 64, pp), title_name, file_name)
         if y == 4:
-             train_model(make_pruned_CNN_model(token.num_words, 64, pp), title_name, file_name)
+            train_model(make_pruned_CNN_model(token.num_words, 64, pp), title_name, file_name)
         if y == 5:
-             train_model(make_pruned_GRU_model(token.num_words, 64, pp), title_name, file_name)
+            train_model(make_pruned_GRU_model(token.num_words, 64, pp), title_name, file_name)
 
 # try:
 #     model = tf.keras.models.load_model('Checkpoints/make_model')
