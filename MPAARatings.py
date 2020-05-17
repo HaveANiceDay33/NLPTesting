@@ -105,7 +105,7 @@ max_words = 40
 
 dataList = tf.keras.preprocessing.sequence.pad_sequences(sequences=features, padding='post', maxlen=max_words)
 
-dataset = tf.data.Dataset.from_tensor_slices((dataList, labels)).batch(85, drop_remainder=True).repeat(5)
+dataset = tf.data.Dataset.from_tensor_slices((dataList, labels)).batch(84, drop_remainder=True).repeat(5)
 
 dataset_shuffled = dataset.shuffle(cT)
 
