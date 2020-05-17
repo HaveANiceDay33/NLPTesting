@@ -336,7 +336,7 @@ def train_model(model, graph_title, file_name):
     history = net_mod.fit(train_dataset, epochs=150, class_weight=class_weights, callbacks=callbacks)
     plt.plot(history.history['accuracy'], label='Accuracy')
     plt.plot(history.history['loss'], label='Loss')
-    plt.plot([0, 50], [1, 1], 'g--', alpha=0.4)
+    plt.plot([0, 150], [1, 1], 'g--', alpha=0.4)
     plt.title('Training metrics for ' + graph_title)
     plt.xlabel('Epoch')
     plt.ylabel('Value')
@@ -384,6 +384,8 @@ dense_models.append(running_model6)
 counter = 0
 
 for model in dense_models:
+    print("")
+    print(dense_names[counter])
     train_model(model, dense_names[counter], dense_names[counter] + "/" + dense_names[counter] + "dense")
     counter += 1
 
@@ -395,6 +397,7 @@ for y in range(0, 6):
         pp = set_pruning_params(fs, 0, frequency=10)
         file_name = dense_names[y] + "/" + str(dense_names[y] + "_" + str(fs * 100) + "sparsity").replace('.0', '')
         title_name = dense_names[y] + " " + str(fs * 100) + "% Sparsity"
+        print("")
         print(file_name)
         if y == 0:
             train_model(make_lstm_pruned_model2(token.num_words, 64, pp), title_name, file_name)
