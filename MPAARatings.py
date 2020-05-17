@@ -394,9 +394,9 @@ dense_models.append(running_model5)
 dense_models.append(running_model6)
 counter = 0
 
-# for model in dense_models:
-#     train_model(model, dense_names[counter],dense_names[counter]+"/"+ dense_names[counter]+"dense")
-#     counter += 1
+for model in dense_models:
+    train_model(model, dense_names[counter],dense_names[counter]+"/"+ dense_names[counter]+"dense")
+    counter += 1
 
 for y in range(6):
     for x in range(10):
