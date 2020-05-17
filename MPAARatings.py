@@ -183,7 +183,7 @@ def make_pruned_lstm_model(embed_dim, embed_out, pp, output_bias=None):
 
     model = keras.Sequential()
     model.add(
-        tfmot.sparsity.keras.prune_low_magnitude(tf.layers.Embedding(embed_dim, embed_out, input_length=max_words)),
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Embedding(embed_dim, embed_out, input_length=max_words)),
         **pp)
     model.add(keras.layers.SpatialDropout1D(0.1))
     # model.add(keras.layers.LSTM(max_words, dropout=0.2, recurrent_dropout=0.2))
