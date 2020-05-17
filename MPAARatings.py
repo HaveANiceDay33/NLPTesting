@@ -3,10 +3,12 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import pandas as pd
 import numpy as np
+import time as time
 from keras.callbacks import CSVLogger
-
 import tensorflow_model_optimization as tfmot
 from tensorflow_model_optimization.sparsity import keras as sparsity
+
+tic = time.perf_counter()
 
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
@@ -114,7 +116,7 @@ train_dataset = training.shuffle(cT, reshuffle_each_iteration=True)
 test_dataset = testing.shuffle(test_size)
 
 
-def set_pruning_params(final_sparsity, begin_step, frequency, end_step=15 * 50):
+def set_pruning_params(final_sparsity, begin_step, frequency, end_step):
     pruning_params = {
         'pruning_schedule': sparsity.PolynomialDecay(initial_sparsity=0,
                                                      final_sparsity=final_sparsity,
@@ -329,11 +331,12 @@ callbacks = [
     sparsity.PruningSummaries(log_dir="logs/", profile_batch=0)
 ]
 
+epochs = 150
 
 def train_model(model, graph_title, file_name):
     net_mod = model
     print(net_mod.summary())
-    history = net_mod.fit(train_dataset, epochs=150, class_weight=class_weights, callbacks=callbacks)
+    history = net_mod.fit(train_dataset, epochs=epochs, class_weight=class_weights, callbacks=callbacks)
     plt.plot(history.history['accuracy'], label='Accuracy')
     plt.plot(history.history['loss'], label='Loss')
     plt.plot([0, 150], [1, 1], 'g--', alpha=0.4)
@@ -394,7 +397,7 @@ for y in range(0, 6):
         fs = x / 10
         if fs == 1:
             fs = 0.99
-        pp = set_pruning_params(fs, 0, frequency=10)
+        pp = set_pruning_params(fs, 0, 10, 15*epochs)
         file_name = dense_names[y] + "/" + str(dense_names[y] + "_" + str(fs * 100) + "sparsity").replace('.0', '')
         title_name = dense_names[y] + " " + str(fs * 100) + "% Sparsity"
         print("")
@@ -411,6 +414,10 @@ for y in range(0, 6):
             train_model(make_pruned_CNN_model(token.num_words, 64, pp), title_name, file_name)
         if y == 5:
             train_model(make_pruned_GRU_model(token.num_words, 64, pp), title_name, file_name)
+
+toc = time.perf_counter()
+
+print(f"Training completed in {toc - tic:0.4f} seconds")
 
 # try:
 #     model = tf.keras.models.load_model('Checkpoints/make_model')
