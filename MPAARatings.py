@@ -306,10 +306,17 @@ def make_CNN_model(embed_dim, embed_out):
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(embed_dim, embed_out),
         tf.keras.layers.Conv1D(kernel_size=max_words, filters=5, activation='relu'),
-        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dropout(0.1),
         tf.keras.layers.Dense(10, activation='relu'),
         tf.keras.layers.Dense(4, activation='softmax')
     ])
+
+    model.compile(optimizer='adam',
+                  loss=keras.losses.CategoricalCrossentropy(),
+                  metrics=['accuracy'])
+
+    return model
+
 
 
 def make_pruned_CNN_model(embed_dim, embed_out, pp):
