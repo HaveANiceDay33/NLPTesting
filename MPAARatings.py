@@ -131,14 +131,14 @@ def make_fully_connected_model(embed_dim, embed_out, output_bias=None):
     if output_bias is not None:
         output_bias = keras.initializers.Constant(output_bias)
 
-    model = keras.Sequential()
-    model.add(keras.layers.Embedding(embed_dim, embed_out, input_length=max_words))
-    model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dense(max_words * embed_out, activation='relu'))
-    model.add(keras.layers.Dense(64))
-    model.add(keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias))
-    model.add(keras.layers.Softmax())
-
+    model = keras.Sequential([
+        keras.layers.Embedding(embed_dim, embed_out, input_length=max_words),
+        keras.layers.Flatten(),
+        keras.layers.Dense(max_words * embed_out, activation='relu'),
+        keras.layers.Dense(64),
+        keras.layers.Dense(4, activation='sigmoid', bias_initializer=output_bias),
+        keras.layers.Softmax()
+    ])
     model.compile(optimizer='adam',
                   loss=keras.losses.CategoricalCrossentropy(),
                   metrics=['accuracy'])
@@ -147,11 +147,21 @@ def make_fully_connected_model(embed_dim, embed_out, output_bias=None):
 
 
 def make_pruned_fc_model(embed_dim, embed_out, pp):
-    normModel = make_fully_connected_model(embed_dim, embed_out)
-    save_model("FCNN", normModel)
+    model = keras.Sequential([
+        tfmot.sparsity.keras.prune_low_magnitude(keras.layers.Embedding(embed_dim, embed_out, input_length=max_words),
+                                                 **pp),
+        keras.layers.Flatten(),
+        tfmot.sparsity.keras.prune_low_magnitude(keras.layers.Dense(max_words * embed_out, activation='relu'), **pp),
+        tfmot.sparsity.keras.prune_low_magnitude(keras.layers.Dense(64), **pp),
+        tfmot.sparsity.keras.prune_low_magnitude(keras.layers.Dense(4, activation='sigmoid'), **pp),
+        keras.layers.Softmax()
+    ])
 
-    pruned_model = prune_loaded_model("Models/FCNN", pp)
-    return pruned_model
+    model.compile(optimizer='adam',
+                  loss=keras.losses.CategoricalCrossentropy(),
+                  metrics=['accuracy'])
+
+    return model
 
 
 def make_lstm_model(embed_dim, embed_out, output_bias=None):
@@ -301,23 +311,22 @@ def make_CNN_model(embed_dim, embed_out):
         tf.keras.layers.Dense(4, activation='softmax')
     ])
 
+
+def make_pruned_CNN_model(embed_dim, embed_out, pp):
+    model = tf.keras.Sequential([
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Embedding(embed_dim, embed_out), **pp),
+        tfmot.sparsity.keras.prune_low_magnitude(
+            tf.keras.layers.Conv1D(kernel_size=max_words, filters=5, activation='relu'), **pp),
+        tf.keras.layers.Dropout(0.1),
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(10, activation='relu'), **pp),
+        tfmot.sparsity.keras.prune_low_magnitude(tf.keras.layers.Dense(4, activation='softmax'), **pp)
+    ])
+
     model.compile(optimizer='adam',
                   loss=keras.losses.CategoricalCrossentropy(),
                   metrics=['accuracy'])
 
     return model
-
-
-def make_pruned_CNN_model(embed_dim, embed_out, pp):
-    try:
-        model = tf.keras.models.load_model('Models/CNN')
-    except:
-        normModel = make_CNN_model(embed_dim, embed_out)
-        save_model("CNN", normModel)
-        # model = train_model("CNN", normModel)
-
-    pruned_model = prune_loaded_model("Models/CNN", pp)
-    return pruned_model
 
 
 def save_model(model_name, model):
@@ -337,7 +346,7 @@ batch_size = 20
 
 def train_model(model, graph_title, file_name):
     net_mod = model
-    #print(net_mod.summary())
+    # print(net_mod.summary())
     history = net_mod.fit(train_dataset, epochs=epochs, class_weight=class_weights, callbacks=callbacks, verbose=0)
     plt.plot(history.history['accuracy'], label='Accuracy')
     plt.plot(history.history['loss'], label='Loss')
@@ -355,6 +364,7 @@ def train_model(model, graph_title, file_name):
     return net_mod
 
 
+# this does not work
 def prune_loaded_model(file_path, pp):
     model_in = tf.keras.models.load_model(file_path)
 
