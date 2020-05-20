@@ -337,8 +337,8 @@ batch_size = 20
 
 def train_model(model, graph_title, file_name):
     net_mod = model
-    print(net_mod.summary())
-    history = net_mod.fit(train_dataset, epochs=epochs, class_weight=class_weights, callbacks=callbacks)
+    #print(net_mod.summary())
+    history = net_mod.fit(train_dataset, epochs=epochs, class_weight=class_weights, callbacks=callbacks, verbose=0)
     plt.plot(history.history['accuracy'], label='Accuracy')
     plt.plot(history.history['loss'], label='Loss')
     plt.plot([0, epochs], [1, 1], 'g--', alpha=0.4)
@@ -389,7 +389,6 @@ dense_models.append(running_model6)
 counter = 0
 
 for model in dense_models:
-    print("")
     print(dense_names[counter])
     train_model(model, dense_names[counter], dense_names[counter] + "/" + dense_names[counter] + "dense")
     counter += 1
@@ -405,32 +404,37 @@ for y in range(0, 6):
         pp = set_pruning_params(fs, 0, 10, batch_size * epochs)
         file_name = dense_names[y] + "/" + str(dense_names[y] + "_" + str(fs * 100) + "sparsity").replace('.0', '')
         title_name = dense_names[y] + " " + str(fs * 100) + "% Sparsity"
-        print("")
-        print(file_name)
+        print(title_name)
         model_name = ""
         if y == 0:
             lstm2 = train_model(make_lstm_pruned_model2(token.num_words, 64, pp), title_name, file_name)
-            perf.append(min(lstm2.evaluate(test_dataset)))
+            results = lstm2.evaluate(test_dataset, verbose=0)
+            perf.append(results[1])
             model_name = "LSTM v2"
         if y == 1:
             lstm1 = train_model(make_pruned_lstm_model(token.num_words, 64, pp), title_name, file_name)
-            perf.append(min(lstm1.evaluate(test_dataset)))
+            results = lstm1.evaluate(test_dataset, verbose=0)
+            perf.append(results[1])
             model_name = "LSTM v1"
         if y == 2:
             fully_con = train_model(make_pruned_fc_model(token.num_words, 8, pp), title_name, file_name)
-            perf.append(min(fully_con.evaluate(test_dataset)))
+            results = fully_con.evaluate(test_dataset, verbose=0)
+            perf.append(results[1])
             model_name = "Fully Connected"
         if y == 3:
             rnn = train_model(make_simple_pruned_RNN_model(token.num_words, 64, pp), title_name, file_name)
-            perf.append(min(rnn.evaluate(test_dataset)))
+            results = rnn.evaluate(test_dataset, verbose=0)
+            perf.append(results[1])
             model_name = "Simple RNN"
         if y == 4:
             cnn = train_model(make_pruned_CNN_model(token.num_words, 64, pp), title_name, file_name)
-            perf.append(min(cnn.evaluate(test_dataset)))
+            results = cnn.evaluate(test_dataset, verbose=0)
+            perf.append(results[1])
             model_name = "CNN"
         if y == 5:
             gru = train_model(make_pruned_GRU_model(token.num_words, 64, pp), title_name, file_name)
-            perf.append(min(gru.evaluate(test_dataset)))
+            results = gru.evaluate(test_dataset, verbose=0)
+            perf.append(results[1])
             model_name = "GRU"
 
     plt.plot(sparsities, perf)
@@ -443,6 +447,8 @@ for y in range(0, 6):
     plt.grid(True)
     plt.savefig('Graphs/Evaluated/' + model_name)
     plt.close()
+    perf.clear()
+
 toc = time.perf_counter()
 
 print(f"Training completed in {toc - tic:0.4f} seconds")
