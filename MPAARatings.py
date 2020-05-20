@@ -331,7 +331,7 @@ callbacks = [
     sparsity.PruningSummaries(log_dir="logs/", profile_batch=0)
 ]
 
-epochs = 1
+epochs = 150
 batch_size = 20
 
 
@@ -387,12 +387,12 @@ dense_models.append(running_model4)
 dense_models.append(running_model5)
 dense_models.append(running_model6)
 counter = 0
-#
-# for model in dense_models:
-#     print("")
-#     print(dense_names[counter])
-#     train_model(model, dense_names[counter], dense_names[counter] + "/" + dense_names[counter] + "dense")
-#     counter += 1
+
+for model in dense_models:
+    print("")
+    print(dense_names[counter])
+    train_model(model, dense_names[counter], dense_names[counter] + "/" + dense_names[counter] + "dense")
+    counter += 1
 
 sparsities = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99]
 
