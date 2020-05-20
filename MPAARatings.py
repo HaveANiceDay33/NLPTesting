@@ -331,7 +331,9 @@ callbacks = [
     sparsity.PruningSummaries(log_dir="logs/", profile_batch=0)
 ]
 
-epochs = 150
+epochs = 1
+batch_size = 20
+
 
 def train_model(model, graph_title, file_name):
     net_mod = model
@@ -339,11 +341,11 @@ def train_model(model, graph_title, file_name):
     history = net_mod.fit(train_dataset, epochs=epochs, class_weight=class_weights, callbacks=callbacks)
     plt.plot(history.history['accuracy'], label='Accuracy')
     plt.plot(history.history['loss'], label='Loss')
-    plt.plot([0, 150], [1, 1], 'g--', alpha=0.4)
+    plt.plot([0, epochs], [1, 1], 'g--', alpha=0.4)
     plt.title('Training metrics for ' + graph_title)
     plt.xlabel('Epoch')
     plt.ylabel('Value')
-    plt.xlim(0, 150)
+    plt.xlim(0, epochs)
     plt.ylim(0, 1.05)
     plt.legend()
     plt.grid(True)
@@ -385,36 +387,62 @@ dense_models.append(running_model4)
 dense_models.append(running_model5)
 dense_models.append(running_model6)
 counter = 0
+#
+# for model in dense_models:
+#     print("")
+#     print(dense_names[counter])
+#     train_model(model, dense_names[counter], dense_names[counter] + "/" + dense_names[counter] + "dense")
+#     counter += 1
 
-for model in dense_models:
-    print("")
-    print(dense_names[counter])
-    train_model(model, dense_names[counter], dense_names[counter] + "/" + dense_names[counter] + "dense")
-    counter += 1
+sparsities = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99]
 
 for y in range(0, 6):
-    for x in range(10):
+    perf = []
+    for x in range(11):
         fs = x / 10
         if fs == 1:
             fs = 0.99
-        pp = set_pruning_params(fs, 0, 10, 15*epochs)
+        pp = set_pruning_params(fs, 0, 10, batch_size * epochs)
         file_name = dense_names[y] + "/" + str(dense_names[y] + "_" + str(fs * 100) + "sparsity").replace('.0', '')
         title_name = dense_names[y] + " " + str(fs * 100) + "% Sparsity"
         print("")
         print(file_name)
+        model_name = ""
         if y == 0:
-            train_model(make_lstm_pruned_model2(token.num_words, 64, pp), title_name, file_name)
+            lstm2 = train_model(make_lstm_pruned_model2(token.num_words, 64, pp), title_name, file_name)
+            perf.append(min(lstm2.evaluate(test_dataset)))
+            model_name = "LSTM v2"
         if y == 1:
-            train_model(make_pruned_lstm_model(token.num_words, 64, pp), title_name, file_name)
+            lstm1 = train_model(make_pruned_lstm_model(token.num_words, 64, pp), title_name, file_name)
+            perf.append(min(lstm1.evaluate(test_dataset)))
+            model_name = "LSTM v1"
         if y == 2:
-            train_model(make_pruned_fc_model(token.num_words, 8, pp), title_name, file_name)
+            fully_con = train_model(make_pruned_fc_model(token.num_words, 8, pp), title_name, file_name)
+            perf.append(min(fully_con.evaluate(test_dataset)))
+            model_name = "Fully Connected"
         if y == 3:
-            train_model(make_simple_pruned_RNN_model(token.num_words, 64, pp), title_name, file_name)
+            rnn = train_model(make_simple_pruned_RNN_model(token.num_words, 64, pp), title_name, file_name)
+            perf.append(min(rnn.evaluate(test_dataset)))
+            model_name = "Simple RNN"
         if y == 4:
-            train_model(make_pruned_CNN_model(token.num_words, 64, pp), title_name, file_name)
+            cnn = train_model(make_pruned_CNN_model(token.num_words, 64, pp), title_name, file_name)
+            perf.append(min(cnn.evaluate(test_dataset)))
+            model_name = "CNN"
         if y == 5:
-            train_model(make_pruned_GRU_model(token.num_words, 64, pp), title_name, file_name)
+            gru = train_model(make_pruned_GRU_model(token.num_words, 64, pp), title_name, file_name)
+            perf.append(min(gru.evaluate(test_dataset)))
+            model_name = "GRU"
 
+    plt.plot(sparsities, perf)
+    plt.title('Accuracies vs. Sparsity % for ' + model_name)
+    plt.xlabel('Percent Sparsity(%)')
+    plt.ylabel('Evaluated Accuracy')
+    plt.xlim(0, 100)
+    plt.xticks(sparsities)
+    plt.ylim(0, 1.05)
+    plt.grid(True)
+    plt.savefig('Graphs/Evaluated/' + model_name)
+    plt.close()
 toc = time.perf_counter()
 
 print(f"Training completed in {toc - tic:0.4f} seconds")
