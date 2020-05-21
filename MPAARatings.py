@@ -66,6 +66,8 @@ def int_to_text(input_sequence, tokenizer):
     return tokenizer.sequences_to_texts(input_sequence)
 
 
+#print(text_to_int(['Death'], token))
+
 features = []
 labels = []
 
@@ -125,7 +127,6 @@ def set_pruning_params(final_sparsity, begin_step, frequency, end_step):
                                                      frequency=frequency)
     }
     return pruning_params
-
 
 def make_fully_connected_model(embed_dim, embed_out, output_bias=None):
     if output_bias is not None:
@@ -362,7 +363,7 @@ def train_model(model, graph_title, file_name):
     plt.xlabel('Epoch')
     plt.ylabel('Value')
     plt.xlim(0, epochs)
-    plt.ylim(0, 1.05)
+    plt.ylim(0.9, 1.05)
     plt.legend()
     plt.grid(True)
     plt.savefig('Graphs/' + file_name)
@@ -404,7 +405,13 @@ dense_models.append(running_model4)
 dense_models.append(running_model5)
 dense_models.append(running_model6)
 counter = 0
+'''
+train_model(running_model3, "Test", "Test")
 
+e = running_model3.layers[0]
+weights = e.get_weights()[0]
+print(weights[107])
+'''
 for model in dense_models:
     print(dense_names[counter])
     train_model(model, dense_names[counter], dense_names[counter] + "/" + dense_names[counter] + "dense")
@@ -460,7 +467,7 @@ for y in range(0, 6):
     plt.ylabel('Evaluated Accuracy')
     plt.xlim(0, 100)
     plt.xticks(sparsities)
-    plt.ylim(0, 1.05)
+    plt.ylim(0.9, 1.05)
     plt.grid(True)
     plt.savefig('Graphs/Evaluated/' + model_name)
     plt.close()
