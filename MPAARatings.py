@@ -308,7 +308,7 @@ def make_CNN_model(embed_dim, embed_out):
         tf.keras.layers.Embedding(embed_dim, embed_out),
         tf.keras.layers.Conv1D(kernel_size=max_words, filters=5, activation='relu'),
         tf.keras.layers.Dropout(0.1),
-        tf.keras.layers.Dense(10, activation='relu'),
+        tf.keras.layers.Dense(64, activation='relu'),
         tf.keras.layers.Dense(4, activation='softmax')
     ])
 
@@ -366,7 +366,7 @@ def train_model(model, graph_title, file_name):
     plt.ylim(0.9, 1.05)
     plt.legend()
     plt.grid(True)
-    plt.savefig('Graphs/' + file_name)
+    plt.savefig('GraphsZoomed/' + file_name)
     plt.close()
 
     return net_mod
@@ -406,7 +406,7 @@ dense_models.append(running_model5)
 dense_models.append(running_model6)
 counter = 0
 '''
-train_model(running_model3, "Test", "Test")
+train_model(running_model5, "Test", "Test")
 
 e = running_model3.layers[0]
 weights = e.get_weights()[0]
@@ -414,11 +414,12 @@ print(weights[107])
 '''
 for model in dense_models:
     print(dense_names[counter])
+    print(model.summary())
     train_model(model, dense_names[counter], dense_names[counter] + "/" + dense_names[counter] + "dense")
     counter += 1
 
 sparsities = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99]
-
+'''
 for y in range(0, 6):
     perf = []
     for x in range(11):
@@ -469,10 +470,10 @@ for y in range(0, 6):
     plt.xticks(sparsities)
     plt.ylim(0.9, 1.05)
     plt.grid(True)
-    plt.savefig('Graphs/Evaluated/' + model_name)
+    plt.savefig('GraphsZoomed/Evaluated/' + model_name)
     plt.close()
     perf.clear()
-
+'''
 toc = time.perf_counter()
 
 print(f"Training completed in {toc - tic:0.4f} seconds")
