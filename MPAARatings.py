@@ -419,7 +419,7 @@ for model in dense_models:
     counter += 1
 
 sparsities = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99]
-'''
+
 for y in range(0, 6):
     perf = []
     for x in range(11):
@@ -473,7 +473,7 @@ for y in range(0, 6):
     plt.savefig('GraphsZoomed/Evaluated/' + model_name)
     plt.close()
     perf.clear()
-'''
+
 toc = time.perf_counter()
 
 print(f"Training completed in {toc - tic:0.4f} seconds")
